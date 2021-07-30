@@ -4,15 +4,14 @@ const Stake = artifacts.require('Stake');
 const SimpleToken = artifacts.require('SimpleToken');
 let stakeInstance;
 let tokenInstance;
-
-let deadline;
+//3 days
+let deadline = 3;
 
 contract('Stake', (accounts) => {
 
     beforeEach(async function () {
         stakeInstance = await Stake.deployed();
         tokenInstance = await SimpleToken.deployed();
-        deadline = (await time.latest()).add(time.duration.minutes(3));
     });
 
     it('should revert only owner can create stake', async () => {
@@ -23,8 +22,12 @@ contract('Stake', (accounts) => {
 
         await stakeInstance.createStake(tokenInstance.address, 100, deadline, { from: accounts[0] });
 
-        const storedData = await stakeInstance.getStake(0);
-        assert.equal(storedData["1"], tokenInstance.address, 'Stake not created');
+        const stake = await stakeInstance.getStake(0);
+        assert.equal(stake[1], tokenInstance.address, 'Stake not created');
+    });
+
+    it('should revert stake already started', async () => {
+        await expectRevert(stakeInstance.createStake(tokenInstance.address, 1000, deadline, { from: accounts[0] }), "Stake is already Started.");
     });
 
     it('should transfer token to a account', async () => {
@@ -49,6 +52,10 @@ contract('Stake', (accounts) => {
         assert.equal(stake[3].length, 1, "Stake not Added");
     });
 
+    it('should revert owner cannot add stake', async () => {
+        expectRevert(stakeInstance.addStake(0, { from: accounts[0] }), `Owner can't stake tokens`);
+    });
+
     it('should revert stake already added', async () => {
         await expectRevert(stakeInstance.addStake(0, { from: accounts[1] }), "Stake already added");
     });
@@ -59,10 +66,10 @@ contract('Stake', (accounts) => {
 
     it('should revert Stake deadline not reached', async () => {
         await expectRevert(stakeInstance.declareWinner(0, { from: accounts[0] }), "Stake deadline not reached");
-
-        await time.increaseTo(deadline.add(time.duration.seconds(1)));
+        const increasedDays = (await time.latest()).add(time.duration.days(3));
+        await time.increaseTo(increasedDays.add(time.duration.hours(1)));
     });
-    
+
     it('should revert Stake has reached its deadline', async () => {
         await expectRevert(stakeInstance.addStake(0, { from: accounts[2] }), "Stake has reached its deadline");
     });
@@ -75,9 +82,7 @@ contract('Stake', (accounts) => {
     });
 
     it('should create second stake for same token', async () => {
-        deadline = (await time.latest()).add(time.duration.minutes(2));
         await stakeInstance.createStake(tokenInstance.address, 100, deadline, { from: accounts[0] });
-        // Get stored value
         const stake1 = await stakeInstance.getStake(0);
         const stake2 = await stakeInstance.getStake(1);
         assert.equal(stake1[1], stake2[1], 'Stake not created again');

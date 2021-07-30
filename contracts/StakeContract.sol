@@ -2,11 +2,9 @@ pragma solidity 0.8.0;
 // SPDX-License-Identifier: Unlicensed
 
 contract Token {
-    function balanceOf(address account) public view  returns (uint256) {}
     function transfer(address recipient, uint256 amount) public virtual  returns (bool) {}
     function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {}
     function owner() public view returns (address) {}
-    function approve(address spender, uint256 amount) external returns (bool){}
     function allowance(address _owner, address spender) external view returns (uint256){}
     function decimals() external view returns (uint8){}
 }
@@ -36,7 +34,7 @@ contract Stake {
     
     uint256 public stakeCount;
     
-    function createStake(address tokenAddress, uint256 amount, uint256 winnerDeclareTime) public  {
+    function createStake(address tokenAddress, uint256 amount, uint256 noOfDays) public  {
         require(msg.sender == Token(tokenAddress).owner(), "Only owner can create a stake.");
         require(stakeState[tokenAddress] != StakeState.Started, "Stake is already Started.");
         
@@ -44,10 +42,10 @@ contract Stake {
         stakes[stakeCount].stakeAmount = amount * 10 ** Token(tokenAddress).decimals();
         stakes[stakeCount].tokenAddress = tokenAddress;
         stakes[stakeCount].winner = address(0);
-        stakes[stakeCount].deadline = winnerDeclareTime;
+        stakes[stakeCount].deadline = block.timestamp + (noOfDays * 1 days);
         
         stakeState[tokenAddress] = StakeState.Started;
-        emit StakeCreated(Token(tokenAddress).owner(), amount, tokenAddress, stakeCount, winnerDeclareTime);
+        emit StakeCreated(Token(tokenAddress).owner(), amount, tokenAddress, stakeCount, stakes[stakeCount].deadline);
         _changeState(StakeState.Started, stakeCount);
         
         stakeCount = stakeCount + 1;
