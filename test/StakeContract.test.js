@@ -82,6 +82,10 @@ contract('Stake', (accounts) => {
         await expectRevert(stakeInstance.addStake(0, { from: accounts[2] }), "Stake has reached its deadline");
     });
 
+    it('should revert cant delete stake', async () => {
+        await expectRevert(stakeInstance.deleteStake(0), "Stakers Availble, You can't delete the stake");
+    });
+
     it('should declare winner', async () => {
         await stakeInstance.declareWinner(0);
 
@@ -100,10 +104,29 @@ contract('Stake', (accounts) => {
     });
 
     it('should create second stake for same token', async () => {
+        deadline = 3;
         await stakeInstance.createStake(tokenInstance.address, 100, deadline, { from: accounts[0] });
         const stake1 = await stakeInstance.getStake(0);
         const stake2 = await stakeInstance.getStake(1);
         assert.equal(stake1[1], stake2[1], 'Stake not created again');
     });
 
+    it('should revert only owner can delete stake', async () => {
+        await expectRevert(stakeInstance.deleteStake(0, { from: accounts[1] }), "Only owner can delete stake");
+    });
+
+
+
+    it('should revert no stakers delete the stake', async () => {
+
+        const increasedDays = (await time.latest()).add(time.duration.days(3));
+        await time.increaseTo(increasedDays.add(time.duration.hours(1)));
+        await expectRevert(stakeInstance.declareWinner(1), "There are no stakers. Delete the stake.");
+    });
+
+    it('should delete a stake', async () => {
+        await stakeInstance.deleteStake(1);
+        const stake = await stakeInstance.getStake(1);
+        assert.equal(stake[4], 3, "Stake not deleted");
+    });
 });

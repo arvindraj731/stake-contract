@@ -11,7 +11,7 @@ contract Token {
 
 contract Stake {
     
-    enum StakeState { NotCreated, Started, Finished }
+    enum StakeState { NotCreated, Started, Finished, Deleted }
     
     struct Stakes{
         address owner;
@@ -82,6 +82,7 @@ contract Stake {
         address stake = stakes[stakeId].tokenAddress;
         require(msg.sender == stakes[stakeId].owner, 'Only owner can declare winner');
         require(block.timestamp >= stakes[stakeId].deadline, "Stake deadline not reached");
+        require(stakes[stakeId].stakers.length > 0, "There are no stakers. Delete the stake");
         
         uint256 winAmount = stakes[stakeId].stakeAmount * stakes[stakeId].stakers.length * 2 / 3;
         uint256 winner = _rand(stakes[stakeId].stakers.length);
@@ -97,6 +98,15 @@ contract Stake {
         
         stakeState[stake] = StakeState.Finished;
         return stakes[stakeId].winner;
+    }
+
+    function deleteStake(uint256 stakeId) public stakeNotCreated(stakeId){
+        require(msg.sender == stakes[stakeId].owner, "Only owner can delete stake");
+        require(block.timestamp >= stakes[stakeId].deadline, "Stake deadline not reached");
+        require(stakes[stakeId].stakers.length == 0, "Stakers Availble, You can't delete the stake");
+
+        _changeState(StakeState.Deleted, stakeId);
+        stakeState[stakes[stakeId].tokenAddress] = StakeState.Deleted;
     }
     
     function checkAllowance(uint256 stakeId, address tokenHolder) public view returns(uint256) {
