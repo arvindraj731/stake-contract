@@ -33,6 +33,16 @@ contract Stake {
     event StakeAdded(address addedBy, uint256 stakeId);
     
     uint256 public stakeCount;
+
+    modifier stakeNotCreated(uint256 stakeId) {
+        require(stakes[stakeId].state != StakeState.NotCreated, "Stake is not Created");
+        _;
+    }
+
+    modifier stakeFinished(uint256 stakeId) {
+        require(stakes[stakeId].state == StakeState.Started, "Stake Finished");
+        _;
+    }
     
     function createStake(address tokenAddress, uint256 amount, uint256 noOfDays) public  {
         require(msg.sender == Token(tokenAddress).owner(), "Only owner can create a stake.");
@@ -51,10 +61,9 @@ contract Stake {
         stakeCount = stakeCount + 1;
     }
     
-    function addStake(uint256 stakeId) public returns(bool) {
+    function addStake(uint256 stakeId) public stakeNotCreated(stakeId) stakeFinished(stakeId) returns(bool) {
         address stake = stakes[stakeId].tokenAddress;
         require(msg.sender != stakes[stakeId].owner, "Owner can't stake tokens");
-        require(stakes[stakeId].state == StakeState.Started, "Stake Finished");
         require(stakeOfUser[stakeId][msg.sender] == 0, "Stake already added");
         require(block.timestamp <= stakes[stakeId].deadline, "Stake has reached its deadline");
         require(Token(stake).allowance(msg.sender, address(this)) >= stakes[stakeId].stakeAmount, "Approve Contract to transfer token");
@@ -69,10 +78,9 @@ contract Stake {
         return true;
     }
     
-    function declareWinner(uint256 stakeId) public returns(address){
+    function declareWinner(uint256 stakeId) stakeNotCreated(stakeId) stakeFinished(stakeId) public returns(address){
         address stake = stakes[stakeId].tokenAddress;
         require(msg.sender == stakes[stakeId].owner, 'Only owner can declare winner');
-        require(address(0) != stakes[stakeId].owner, "Stake is not Started");
         require(block.timestamp >= stakes[stakeId].deadline, "Stake deadline not reached");
         
         uint256 winAmount = stakes[stakeId].stakeAmount * stakes[stakeId].stakers.length * 2 / 3;

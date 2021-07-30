@@ -52,6 +52,10 @@ contract('Stake', (accounts) => {
         assert.equal(stake[3].length, 1, "Stake not Added");
     });
 
+    it('should revert stake not created', async () => {
+        expectRevert(stakeInstance.addStake(1, { from: accounts[1] }), `Stake is not Created`);
+    });
+
     it('should revert owner cannot add stake', async () => {
         expectRevert(stakeInstance.addStake(0, { from: accounts[0] }), `Owner can't stake tokens`);
     });
@@ -70,6 +74,10 @@ contract('Stake', (accounts) => {
         await time.increaseTo(increasedDays.add(time.duration.hours(1)));
     });
 
+    it('should revert stake not created', async () => {
+        await expectRevert(stakeInstance.declareWinner(1, { from: accounts[0] }), "Stake is not Created");
+    });
+
     it('should revert Stake has reached its deadline', async () => {
         await expectRevert(stakeInstance.addStake(0, { from: accounts[2] }), "Stake has reached its deadline");
     });
@@ -79,6 +87,16 @@ contract('Stake', (accounts) => {
 
         const winner = await stakeInstance.getStake(0);
         assert.equal(winner[5], accounts[1], "Winner not declared");
+    });
+
+    it('should revert stake finished', async () => {
+        await expectRevert(stakeInstance.addStake(0, { from: accounts[1] }), "Stake Finished");
+
+    });
+
+    it('should revert stake finished', async () => {
+        await expectRevert(stakeInstance.declareWinner(0), "Stake Finished");
+
     });
 
     it('should create second stake for same token', async () => {
